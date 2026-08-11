@@ -22,14 +22,14 @@ jobs:
       matrix:
         include:
           - os: macos-14
-            command: npx electron-builder --mac dmg --arm64 --x64 --publish always
           - os: windows-2022
-            command: npx electron-builder --win nsis --x64 --publish always
     runs-on: ${{ matrix.os }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      CSC_LINK: ${{ matrix.os == 'macos-14' && secrets.MAC_CSC_LINK || secrets.WIN_CSC_LINK }}
-      CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-14' && secrets.MAC_CSC_KEY_PASSWORD || secrets.WIN_CSC_KEY_PASSWORD }}
+      MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+      MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+      WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+      WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -43,4 +43,21 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
-      - run: ${{ matrix.command }} --config.publish.channel=$CHANNEL
+      - name: Package macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          if [ -n "$MAC_CSC_LINK" ]; then
+            export CSC_LINK="$MAC_CSC_LINK"
+            export CSC_KEY_PASSWORD="$MAC_CSC_KEY_PASSWORD"
+          fi
+          npx electron-builder --mac dmg --arm64 --x64 --publish always --config.publish.channel="$CHANNEL"
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if ($env:WIN_CSC_LINK) {
+            $env:CSC_LINK = $env:WIN_CSC_LINK
+            $env:CSC_KEY_PASSWORD = $env:WIN_CSC_KEY_PASSWORD
+          }
+          npx electron-builder --win nsis --x64 --publish always --config.publish.channel="$env:CHANNEL"
