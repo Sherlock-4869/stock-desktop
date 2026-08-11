@@ -11,11 +11,16 @@
 <body>
   <main class="shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">S</span><span>Stock Watch</span></div>
-      <div class="topbar-actions">
-        <button id="check-update" class="button quiet" type="button">检查更新</button>
-        <button id="open-overlay" class="button primary" type="button" disabled>打开盯盘悬浮窗</button>
+      <div class="brand drag-region"><span class="brand-mark">S</span><span>Stock Watch</span></div>
+      <div class="topbar-actions no-drag">
+        <button id="color-toggle" class="button quiet color-toggle" type="button" aria-pressed="true" hidden>行情颜色 <span id="color-toggle-state">开</span></button>
+        <button id="check-update" class="button quiet" type="button" hidden>检查更新</button>
+        <button id="open-overlay" class="button primary" type="button" disabled hidden>打开盯盘悬浮窗</button>
         <button id="logout" class="button quiet" type="button" hidden>退出登录</button>
+        <span class="window-controls" aria-label="窗口操作">
+          <button id="minimize-window" class="window-button" type="button" aria-label="最小化">−</button>
+          <button id="close-window" class="window-button close" type="button" aria-label="退出应用">×</button>
+        </span>
       </div>
     </header>
 
@@ -23,12 +28,9 @@
 
     <section id="login-view" class="login-layout">
       <form id="login-form" class="card login-card">
-        <p class="eyebrow">桌面端登录</p>
+        <p class="eyebrow">Stock Watch 桌面端</p>
         <h1>连接你的盯盘账户</h1>
-        <p class="muted">客户端只保存经系统安全存储加密的会话，不会保存密码。</p>
-        <label>股票服务地址
-          <input id="server-url" name="serverUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://stock.example.com" required>
-        </label>
+        <p class="muted">连接安全服务，客户端只保存经系统安全存储加密的会话，不会保存密码。</p>
         <label>账号
           <input id="username" name="username" autocomplete="username" maxlength="32" required>
         </label>

@@ -86,8 +86,11 @@ function createMainWindow() {
     minWidth:900,
     minHeight:620,
     show:false,
+    frame:false,
+    transparent:true,
+    hasShadow:true,
     title:'Stock Watch',
-    backgroundColor:'#0c111b',
+    backgroundColor:'#00000000',
     webPreferences:preloadOptions(),
   });
   protectWebContents(mainWindow.webContents);
@@ -178,10 +181,6 @@ function registerIpc() {
     assertDesktopWindow(event);
     return { ...(await apiClient.bootstrap()), settings:preferences.getPublic() };
   });
-  ipcMain.handle('desktop:set-server-url', async (event, value) => {
-    assertMainWindow(event);
-    return { serverUrl:preferences.setServerUrl(value) };
-  });
   ipcMain.handle('desktop:login', async (event, credentials) => {
     assertMainWindow(event);
     if (!credentials || typeof credentials !== 'object') throw new Error('登录信息不正确');
@@ -221,6 +220,34 @@ function registerIpc() {
       overlayWindow.webContents.send('desktop:overlay-group', values.groupId);
     }
     return values;
+  });
+  ipcMain.handle('desktop:overlay-preview-opacity', async (event, value) => {
+    if (event.sender !== overlayWindow?.webContents) throw new Error('此操作只能由悬浮窗发起');
+    const opacity = Number(value);
+    if (!Number.isFinite(opacity) || opacity < 0.3 || opacity > 1) throw new Error('透明度范围为 30%-100%');
+    overlayWindow.setOpacity(opacity);
+    return { opacity };
+  });
+  ipcMain.handle('desktop:market-colors-update', async (event, value) => {
+    assertDesktopWindow(event);
+    const marketColors = preferences.setMarketColors(value);
+    if (overlayWindow && !overlayWindow.isDestroyed() && event.sender !== overlayWindow.webContents) {
+      overlayWindow.webContents.send('desktop:market-colors', marketColors);
+    }
+    if (mainWindow && !mainWindow.isDestroyed() && event.sender !== mainWindow.webContents) {
+      mainWindow.webContents.send('desktop:market-colors', marketColors);
+    }
+    return { marketColors };
+  });
+  ipcMain.handle('desktop:window-minimize', async event => {
+    assertMainWindow(event);
+    mainWindow.minimize();
+    return { minimized:true };
+  });
+  ipcMain.handle('desktop:app-quit', async event => {
+    assertDesktopWindow(event);
+    app.quit();
+    return { quitting:true };
   });
   ipcMain.handle('desktop:update-check', async event => {
     assertMainWindow(event);

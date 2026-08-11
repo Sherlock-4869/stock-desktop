@@ -42,7 +42,7 @@ class DesktopApiClient {
     const request = normalizeApiRequest(input);
     if (!request) throw new Error('不允许的桌面端请求');
     const serverUrl = this.getServerUrl();
-    if (!serverUrl) throw new Error('请先填写股票服务地址');
+    if (!serverUrl) throw new Error('股票服务地址未配置');
     const headers = { Accept:'application/json, text/plain;q=0.9' };
     if (this.session?.token && request.path !== '/api/auth/desktop/login') {
       headers.Authorization = `Bearer ${this.session.token}`;

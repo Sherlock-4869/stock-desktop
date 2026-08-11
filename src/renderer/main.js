@@ -8,15 +8,19 @@ const state = {
   refreshTimer:null,
   refreshing:false,
   highlightedSymbol:null,
+  preferences:null,
+  marketColors:true,
 };
 
 const elements = {
   notice:document.getElementById('notice'), loginView:document.getElementById('login-view'), watchView:document.getElementById('watch-view'),
-  serverUrl:document.getElementById('server-url'), loginForm:document.getElementById('login-form'), loginError:document.getElementById('login-error'),
+  loginForm:document.getElementById('login-form'), loginError:document.getElementById('login-error'),
   loginSubmit:document.getElementById('login-submit'), userName:document.getElementById('user-name'), groups:document.getElementById('groups'),
   list:document.getElementById('watchlist'), status:document.getElementById('quote-status'), statusDot:document.getElementById('status-dot'),
   openOverlay:document.getElementById('open-overlay'), logout:document.getElementById('logout'), refresh:document.getElementById('refresh'), targetNote:document.getElementById('target-note'),
   checkUpdate:document.getElementById('check-update'),
+  colorToggle:document.getElementById('color-toggle'), colorToggleState:document.getElementById('color-toggle-state'),
+  minimizeWindow:document.getElementById('minimize-window'), closeWindow:document.getElementById('close-window'),
 };
 
 function showNotice(message, { error = false, action = null } = {}) {
@@ -66,6 +70,13 @@ function activeGroup() {
 function setStatus(message, mode = 'idle') {
   elements.status.textContent = message;
   elements.statusDot.className = `status-dot${mode === 'online' ? ' online' : mode === 'offline' ? ' offline' : ''}`;
+}
+
+function applyMarketColors(value) {
+  state.marketColors = value !== false;
+  document.body.classList.toggle('market-colors-off', !state.marketColors);
+  elements.colorToggle.setAttribute('aria-pressed', String(state.marketColors));
+  elements.colorToggleState.textContent = state.marketColors ? '开' : '关';
 }
 
 function renderGroups() {
@@ -151,24 +162,28 @@ async function selectGroup(groupId) {
 }
 
 function renderAuthenticated(auth, settings) {
+  state.preferences = settings || state.preferences;
   state.auth = auth;
   state.groups = groupsFromConfig(auth.config);
   state.refreshInterval = refreshIntervalFromConfig(auth.config);
   const configuredActive = auth.config?.values?.watchlist_active_group_v1;
-  const preferred = settings?.overlay?.groupId || configuredActive;
+  const preferred = state.preferences?.overlay?.groupId || configuredActive;
   state.activeGroupId = state.groups.some(group => group.id === preferred) ? preferred : state.groups[0]?.id || null;
   elements.userName.textContent = auth.user?.displayName || '账户';
   elements.loginView.hidden = true; elements.watchView.hidden = false;
-  elements.openOverlay.disabled = false; elements.logout.hidden = false;
+  elements.openOverlay.disabled = false; elements.openOverlay.hidden = false; elements.logout.hidden = false;
+  elements.colorToggle.hidden = false; elements.checkUpdate.hidden = false;
+  applyMarketColors(state.preferences?.marketColors);
   renderGroups(); renderRows(); startRefreshTimer(); refreshQuotes();
 }
 
 function renderLoggedOut(settings, offline = false) {
+  state.preferences = settings || state.preferences;
   state.auth = null; state.groups = []; state.activeGroupId = null; clearInterval(state.refreshTimer);
   elements.watchView.hidden = true; elements.loginView.hidden = false;
-  elements.openOverlay.disabled = true; elements.logout.hidden = true;
-  elements.serverUrl.value = settings?.serverUrl || '';
-  if (offline) showNotice('暂时无法连接服务器；请检查网络和服务地址。', { error:true });
+  elements.openOverlay.disabled = true; elements.openOverlay.hidden = true; elements.logout.hidden = true;
+  elements.colorToggle.hidden = true; elements.checkUpdate.hidden = true;
+  if (offline) showNotice('暂时无法连接股票服务，请检查网络后重试。', { error:true });
 }
 
 async function handleLogin(event) {
@@ -176,11 +191,9 @@ async function handleLogin(event) {
   elements.loginError.textContent = ''; elements.loginSubmit.disabled = true; elements.loginSubmit.textContent = '登录中…';
   const form = new FormData(elements.loginForm);
   try {
-    const saved = await window.desktop.setServerUrl(form.get('serverUrl'));
-    elements.serverUrl.value = saved.serverUrl;
     const result = await window.desktop.login({ username:form.get('username'), password:form.get('password') });
     elements.loginForm.querySelector('#password').value = '';
-    renderAuthenticated(result.payload, { overlay:null });
+    renderAuthenticated(result.payload, state.preferences);
     showNotice(result.persisted ? '登录成功，桌面会话已受系统安全存储保护。' : '登录成功；当前系统安全存储不可用，关闭应用后需要重新登录。', { error:!result.persisted });
   } catch (error) {
     elements.loginError.textContent = error.message;
@@ -217,17 +230,31 @@ function handleUpdateStatus(update) {
 elements.loginForm.addEventListener('submit', handleLogin);
 elements.openOverlay.addEventListener('click', () => window.desktop.openOverlay().catch(error => showNotice(error.message, { error:true })));
 elements.refresh.addEventListener('click', refreshQuotes);
+elements.colorToggle.addEventListener('click', async () => {
+  const next = !state.marketColors;
+  applyMarketColors(next);
+  try {
+    const result = await window.desktop.setMarketColors(next);
+    state.preferences = { ...(state.preferences || {}), marketColors:result.marketColors };
+  } catch (error) {
+    applyMarketColors(!next);
+    showNotice(error.message, { error:true });
+  }
+});
 elements.logout.addEventListener('click', async () => {
-  try { await window.desktop.logout(); renderLoggedOut({ serverUrl:elements.serverUrl.value }); showNotice('已退出桌面端登录。'); }
+  try { await window.desktop.logout(); renderLoggedOut(state.preferences); showNotice('已退出桌面端登录。'); }
   catch (error) { showNotice(error.message, { error:true }); }
 });
 elements.checkUpdate.addEventListener('click', async () => {
   try { await window.desktop.checkForUpdates(); } catch (error) { showNotice(error.message, { error:true }); }
 });
+elements.minimizeWindow.addEventListener('click', () => window.desktop.minimizeMain());
+elements.closeWindow.addEventListener('click', () => window.desktop.quitApp());
 window.desktop.onNavigate(handleDeepLink);
+window.desktop.onMarketColors(applyMarketColors);
 window.desktop.onUpdateStatus(handleUpdateStatus);
 window.desktop.onSessionRefreshed(({ auth, secureStorageAvailable }) => {
-  if (auth) renderAuthenticated(auth, { overlay:null });
+  if (auth) renderAuthenticated(auth);
   if (!secureStorageAvailable) showNotice('系统安全存储暂时不可用，关闭应用后需要重新登录。', { error:true });
 });
 

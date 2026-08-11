@@ -1,9 +1,10 @@
 'use strict';
 
-const state = { auth:null, groups:[], groupId:null, refreshing:false, timer:null, preferences:null };
+const state = { auth:null, groups:[], groupId:null, refreshing:false, timer:null, preferences:null, marketColors:true, opacityFrame:null };
 const elements = {
   settings:document.getElementById('settings'), settingsToggle:document.getElementById('settings-toggle'), groupSelect:document.getElementById('group-select'),
   opacity:document.getElementById('opacity'), opacityValue:document.getElementById('opacity-value'), alwaysOnTop:document.getElementById('always-on-top'),
+  marketColors:document.getElementById('market-colors'),
   width:document.getElementById('width'), height:document.getElementById('height'), applySize:document.getElementById('apply-size'),
   groupName:document.getElementById('group-name'), status:document.getElementById('status'), quotes:document.getElementById('quotes'), refresh:document.getElementById('refresh'), close:document.getElementById('close'),
 };
@@ -22,6 +23,12 @@ function currentGroup() { return state.groups.find(group => group.id === state.g
 function refreshInterval(config) { const value = Number(config?.values?.stock_refresh_interval_v1); return [1000,3000,5000,10000,30000,60000].includes(value) ? value : 5000; }
 function setStatus(value) { elements.status.textContent = value; }
 function setSizeFields() { elements.width.value = window.innerWidth; elements.height.value = window.innerHeight; }
+
+function applyMarketColors(value) {
+  state.marketColors = value !== false;
+  document.body.classList.toggle('market-colors-off', !state.marketColors);
+  elements.marketColors.checked = state.marketColors;
+}
 
 function renderGroups() {
   elements.groupSelect.replaceChildren();
@@ -73,19 +80,36 @@ async function applySize() {
   catch (error) { setStatus(error.message); }
 }
 function applyPreferences(preferences) {
-  state.preferences = preferences;
+  state.preferences = { ...(state.preferences || {}), ...preferences };
   elements.opacity.value = String(Math.round(preferences.opacity * 100)); elements.opacityValue.textContent = `${elements.opacity.value}%`;
   elements.alwaysOnTop.checked = preferences.alwaysOnTop !== false; setSizeFields();
+  applyMarketColors(state.preferences.marketColors);
 }
 
 elements.settingsToggle.addEventListener('click', () => { elements.settings.hidden = !elements.settings.hidden; setSizeFields(); });
 elements.refresh.addEventListener('click', refreshQuotes); elements.close.addEventListener('click', () => window.desktop.closeOverlay());
 elements.groupSelect.addEventListener('change', event => setGroup(event.target.value));
-elements.opacity.addEventListener('input', event => { elements.opacityValue.textContent = `${event.target.value}%`; });
+elements.opacity.addEventListener('input', event => {
+  elements.opacityValue.textContent = `${event.target.value}%`;
+  if (state.opacityFrame) cancelAnimationFrame(state.opacityFrame);
+  state.opacityFrame = requestAnimationFrame(() => {
+    state.opacityFrame = null;
+    window.desktop.previewOverlayOpacity(Number(elements.opacity.value) / 100).catch(() => {});
+  });
+});
 elements.opacity.addEventListener('change', event => window.desktop.updateOverlay({ opacity:Number(event.target.value) / 100 }).then(value => { state.preferences = value; }));
+elements.marketColors.addEventListener('change', async event => {
+  const next = event.target.checked;
+  applyMarketColors(next);
+  try {
+    const result = await window.desktop.setMarketColors(next);
+    state.preferences = { ...(state.preferences || {}), marketColors:result.marketColors };
+  } catch (_) { applyMarketColors(!next); }
+});
 elements.alwaysOnTop.addEventListener('change', event => window.desktop.updateOverlay({ alwaysOnTop:event.target.checked }).then(value => { state.preferences = value; }));
 elements.applySize.addEventListener('click', applySize); window.addEventListener('resize', setSizeFields);
 window.desktop.onOverlayGroup(groupId => { if (groupId !== state.groupId) setGroup(groupId); });
+window.desktop.onMarketColors(applyMarketColors);
 
 (async () => {
   const result = await window.desktop.bootstrap();
@@ -93,5 +117,5 @@ window.desktop.onOverlayGroup(groupId => { if (groupId !== state.groupId) setGro
   state.auth = result.auth; state.groups = groupsFromConfig(result.auth.config);
   const desired = result.settings?.overlay?.groupId || result.auth.config?.values?.watchlist_active_group_v1;
   state.groupId = state.groups.some(group => group.id === desired) ? desired : state.groups[0]?.id || null;
-  applyPreferences(result.settings.overlay); renderGroups(); renderQuotes(); startTimer(); refreshQuotes();
+  applyPreferences({ ...result.settings.overlay, marketColors:result.settings.marketColors }); renderGroups(); renderQuotes(); startTimer(); refreshQuotes();
 })().catch(() => setStatus('初始化失败'));

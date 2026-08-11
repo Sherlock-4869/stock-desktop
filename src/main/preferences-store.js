@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { normalizeServerUrl } = require('../shared/protocol');
+const DESKTOP_SERVER_URL = 'https://stock.sherlock-holmes.cn';
 
 const DEFAULT_OVERLAY = Object.freeze({
   bounds: null,
@@ -36,7 +36,8 @@ function sanitizeOverlay(value) {
 function defaultSettings() {
   return {
     version: 1,
-    serverUrl: '',
+    serverUrl: DESKTOP_SERVER_URL,
+    marketColors: true,
     mainWindowBounds: null,
     overlay: { ...DEFAULT_OVERLAY },
   };
@@ -53,7 +54,10 @@ class PreferencesStore {
       const parsed = JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
       this.settings = {
         version: 1,
-        serverUrl: normalizeServerUrl(parsed?.serverUrl, { allowHttp:process.env.NODE_ENV !== 'production' }) || '',
+        // The desktop client is deliberately bound to the official service. Do
+        // not restore an old user-provided address from disk.
+        serverUrl: DESKTOP_SERVER_URL,
+        marketColors: parsed?.marketColors !== false,
         mainWindowBounds: validBounds(parsed?.mainWindowBounds, { minWidth:900, minHeight:620, maxWidth:5000, maxHeight:4000 }),
         overlay: sanitizeOverlay(parsed?.overlay),
       };
@@ -74,12 +78,11 @@ class PreferencesStore {
     fs.renameSync(temporary, this.filePath);
   }
 
-  setServerUrl(value) {
-    const serverUrl = normalizeServerUrl(value, { allowHttp:process.env.NODE_ENV !== 'production' });
-    if (!serverUrl) throw new Error('服务器地址必须是 HTTPS 地址（仅开发环境允许 HTTP）');
-    this.settings.serverUrl = serverUrl;
+  setMarketColors(value) {
+    if (typeof value !== 'boolean') throw new Error('行情颜色设置不正确');
+    this.settings.marketColors = value;
     this.save();
-    return serverUrl;
+    return value;
   }
 
   setMainWindowBounds(bounds) {
@@ -96,4 +99,4 @@ class PreferencesStore {
   }
 }
 
-module.exports = { PreferencesStore, validBounds, sanitizeOverlay };
+module.exports = { DESKTOP_SERVER_URL, PreferencesStore, validBounds, sanitizeOverlay };
