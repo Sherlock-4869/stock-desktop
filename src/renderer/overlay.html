@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'">
+  <title>Stock Watch 盯盘</title>
+  <link rel="stylesheet" href="overlay.css">
+  <script src="overlay.js" defer></script>
+</head>
+<body>
+  <main class="window">
+    <header class="titlebar">
+      <div class="drag-title"><span class="pulse"></span>自选盯盘</div>
+      <div class="title-actions no-drag">
+        <button id="settings-toggle" type="button" aria-label="悬浮窗设置">⚙</button>
+        <button id="refresh" type="button" aria-label="刷新行情">↻</button>
+        <button id="close" type="button" aria-label="关闭悬浮窗">×</button>
+      </div>
+    </header>
+    <section id="settings" class="settings no-drag" hidden>
+      <label>分组 <select id="group-select"></select></label>
+      <label>透明度 <input id="opacity" type="range" min="30" max="100" value="94"><output id="opacity-value">94%</output></label>
+      <label class="check"><input id="always-on-top" type="checkbox" checked> 始终置顶</label>
+      <div class="size-row"><label>宽 <input id="width" type="number" min="360" max="1600"></label><label>高 <input id="height" type="number" min="230" max="1200"></label><button id="apply-size" type="button">应用尺寸</button></div>
+    </section>
+    <section class="content">
+      <div class="meta"><strong id="group-name">当前分组</strong><span id="status">等待刷新</span></div>
+      <div class="quote-head"><span>代码 / 名称</span><span>最新价</span><span>涨跌额</span><span>涨跌幅</span></div>
+      <div id="quotes" class="quotes"></div>
+    </section>
+  </main>
+</body>
+</html>

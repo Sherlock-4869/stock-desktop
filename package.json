@@ -1,0 +1,70 @@
+{
+  "name": "stock-desktop",
+  "version": "0.1.0",
+  "description": "Stock Watch desktop client for macOS and Windows",
+  "private": true,
+  "main": "src/main/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check src/main/index.js && node --check src/main/api-client.js && node --check src/main/preferences-store.js && node --check src/main/token-vault.js && node --check src/preload/index.js && node --check src/renderer/main.js && node --check src/renderer/overlay.js && node --check src/shared/protocol.js",
+    "test": "node --test test/*.test.js",
+    "dist": "electron-builder --publish never",
+    "dist:publish": "electron-builder --publish always"
+  },
+  "build": {
+    "appId": "cn.sherlockholmes.stockwatch",
+    "productName": "Stock Watch",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "protocols": [
+      {
+        "name": "Stock Watch",
+        "schemes": [
+          "stockwatch"
+        ]
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Sherlock-4869",
+        "repo": "stock-desktop"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^43.3.0",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  }
+}

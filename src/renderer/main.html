@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'">
+  <title>Stock Watch</title>
+  <link rel="stylesheet" href="main.css">
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">S</span><span>Stock Watch</span></div>
+      <div class="topbar-actions">
+        <button id="check-update" class="button quiet" type="button">检查更新</button>
+        <button id="open-overlay" class="button primary" type="button" disabled>打开盯盘悬浮窗</button>
+        <button id="logout" class="button quiet" type="button" hidden>退出登录</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice" role="status" hidden></div>
+
+    <section id="login-view" class="login-layout">
+      <form id="login-form" class="card login-card">
+        <p class="eyebrow">桌面端登录</p>
+        <h1>连接你的盯盘账户</h1>
+        <p class="muted">客户端只保存经系统安全存储加密的会话，不会保存密码。</p>
+        <label>股票服务地址
+          <input id="server-url" name="serverUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://stock.example.com" required>
+        </label>
+        <label>账号
+          <input id="username" name="username" autocomplete="username" maxlength="32" required>
+        </label>
+        <label>密码
+          <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+        </label>
+        <p id="login-error" class="form-error" role="alert"></p>
+        <button id="login-submit" class="button primary wide" type="submit">登录</button>
+        <p class="footnote">需要先在网页端注册账号。微信扫码账号请先在网页端设置密码后再登录。</p>
+      </form>
+    </section>
+
+    <section id="watch-view" class="watch-view" hidden>
+      <div class="watch-heading">
+        <div>
+          <p class="eyebrow">已登录为 <span id="user-name"></span></p>
+          <h1>自选盯盘</h1>
+        </div>
+        <div class="quote-status"><span id="status-dot" class="status-dot"></span><span id="quote-status">等待刷新</span><button id="refresh" class="text-button" type="button">立即刷新</button></div>
+      </div>
+      <nav id="groups" class="groups" aria-label="自选分组"></nav>
+      <div id="target-note" class="target-note" hidden></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>代码</th><th>名称</th><th>最新价</th><th>涨跌额</th><th>涨跌幅</th><th>更新时间</th></tr></thead>
+          <tbody id="watchlist"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

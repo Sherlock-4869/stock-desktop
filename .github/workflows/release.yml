@@ -1,0 +1,46 @@
+name: build-and-release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Update channel
+        required: true
+        default: latest
+        type: choice
+        options: [latest, beta]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            command: npx electron-builder --mac dmg --arm64 --x64 --publish always
+          - os: windows-2022
+            command: npx electron-builder --win nsis --x64 --publish always
+    runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CSC_LINK: ${{ matrix.os == 'macos-14' && secrets.MAC_CSC_LINK || secrets.WIN_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-14' && secrets.MAC_CSC_KEY_PASSWORD || secrets.WIN_CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      CHANNEL: ${{ inputs.channel || 'latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: ${{ matrix.command }} --config.publish.channel=$CHANNEL
