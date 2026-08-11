@@ -1,6 +1,6 @@
 {
   "name": "stock-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Stock Watch desktop client for macOS and Windows",
   "private": true,
   "main": "src/main/index.js",
@@ -10,7 +10,7 @@
   "scripts": {
     "start": "electron .",
     "check": "node --check src/main/index.js && node --check src/main/api-client.js && node --check src/main/preferences-store.js && node --check src/main/token-vault.js && node --check src/preload/index.js && node --check src/renderer/main.js && node --check src/renderer/overlay.js && node --check src/shared/protocol.js",
-    "test": "node --test test/*.test.js",
+    "test": "node test/run-tests.js",
     "dist": "electron-builder --publish never",
     "dist:publish": "electron-builder --publish always"
   },
