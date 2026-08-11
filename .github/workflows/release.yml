@@ -25,7 +25,6 @@ jobs:
           - os: windows-2022
     runs-on: ${{ matrix.os }}
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
       MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
       WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
@@ -51,7 +50,7 @@ jobs:
             export CSC_LINK="$MAC_CSC_LINK"
             export CSC_KEY_PASSWORD="$MAC_CSC_KEY_PASSWORD"
           fi
-          npx electron-builder --mac dmg --arm64 --x64 --publish always --config.publish.channel="$CHANNEL"
+          npx electron-builder --mac dmg zip --arm64 --x64 --publish never --config.publish.channel="$CHANNEL"
       - name: Package Windows
         if: runner.os == 'Windows'
         shell: pwsh
@@ -60,4 +59,37 @@ jobs:
             $env:CSC_LINK = $env:WIN_CSC_LINK
             $env:CSC_KEY_PASSWORD = $env:WIN_CSC_KEY_PASSWORD
           }
-          npx electron-builder --win nsis --x64 --publish always --config.publish.channel="$env:CHANNEL"
+          npx electron-builder --win nsis --x64 --publish never --config.publish.channel="$env:CHANNEL"
+      - name: Upload release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            dist/*.dmg
+            dist/*.dmg.blockmap
+            dist/*.zip
+            dist/*.zip.blockmap
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest*.yml
+
+  release:
+    name: publish release
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download packaged files
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Stock Watch ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ inputs.channel == 'beta' }}
+          generate_release_notes: true
+          files: release-assets/**/*
