@@ -85,6 +85,8 @@ function createMainWindow() {
     y:storedBounds?.y,
     minWidth:900,
     minHeight:620,
+    movable:true,
+    skipTaskbar:false,
     show:false,
     frame:false,
     transparent:true,
@@ -121,7 +123,13 @@ function applyOverlayPreferences(values) {
   overlayWindow.setOpacity(values.opacity);
   overlayWindow.setAlwaysOnTop(values.alwaysOnTop);
   if (process.platform === 'darwin') {
-    overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen:true });
+    // Keep the main app a regular macOS application. Calling this without
+    // skipTransformProcessType can temporarily turn the process into an
+    // accessory app, which makes its Dock icon disappear.
+    overlayWindow.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen:true,
+      skipTransformProcessType:true,
+    });
     if (values.alwaysOnTop) overlayWindow.setAlwaysOnTop(true, 'floating', 1);
   }
 }
@@ -288,6 +296,12 @@ if (!app.requestSingleInstanceLock()) {
     sendTarget(parseDeepLink(url));
   });
   app.whenReady().then(() => {
+    if (process.platform === 'darwin') {
+      // The desktop client is a normal app, not a menu-bar-only utility.
+      // Make this explicit so its running icon stays available in the Dock.
+      app.setActivationPolicy('regular');
+      app.dock?.show().catch(error => console.warn('stock desktop dock show error:', error));
+    }
     preferences = new PreferencesStore(app.getPath('userData'));
     preferences.load();
     apiClient = new DesktopApiClient({

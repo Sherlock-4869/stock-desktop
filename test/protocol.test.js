@@ -41,3 +41,15 @@ test('server address rejects credentials, paths, and production HTTP', () => {
   assert.equal(normalizeServerUrl('http://stock.example.com'), null);
   assert.equal(normalizeServerUrl('http://stock.example.com', { allowHttp:true }), 'http://stock.example.com');
 });
+
+test('main window keeps a dock presence and a full-width draggable title bar', () => {
+  const mainSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'src', 'main', 'index.js'), 'utf8');
+  const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'src', 'renderer', 'main.html'), 'utf8');
+  assert.match(mainSource, /movable:true/);
+  assert.match(mainSource, /skipTaskbar:false/);
+  assert.match(mainSource, /app\.setActivationPolicy\('regular'\)/);
+  assert.match(mainSource, /app\.dock\?\.show\(\)/);
+  assert.match(mainSource, /skipTransformProcessType:true/);
+  assert.match(html, /<header class="topbar drag-region">/);
+  assert.match(html, /topbar-actions no-drag/);
+});
